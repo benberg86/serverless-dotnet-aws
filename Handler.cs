@@ -28,6 +28,7 @@ namespace AwsDotnetCsharp
       {
         //do stuff for each instance in region
         context.Logger.LogLine(instance.DBInstanceArn);
+
       });
 
       var response = new APIGatewayProxyResponse
