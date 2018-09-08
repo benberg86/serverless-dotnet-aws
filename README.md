@@ -15,13 +15,12 @@ chmod +x dotnet-install.sh
 # Symlink the binary
 ln -s /opt/dotnet/dotnet /usr/local/bin
 ```
-- Install serverless framework
-  - Install nodejs
-    - ```
+- Install nodejs and serverless framework
+```
 brew install nodejs
 npm install -g serverless
 ```
-create project
+- create project
 ```
 sls create --template aws-csharp --name projectname
 ```
