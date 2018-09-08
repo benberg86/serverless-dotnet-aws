@@ -30,11 +30,17 @@ namespace AwsDotnetCsharp
         context.Logger.LogLine(instance.DBInstanceArn);
 
       });
+      var strresponse = "";
+      dbresponse.Result.DBInstances.ForEach(instance =>
+      {
+        strresponse += instance.DBName + System.Environment.NewLine;
+
+      });
 
       var response = new APIGatewayProxyResponse
       {
         StatusCode = (int)HttpStatusCode.OK,
-        Body = "{ \"Message\": " + dbresponse + " }",
+        Body = "{ \"Message\":" + strresponse + "}",
         Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
       };
 
