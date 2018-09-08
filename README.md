@@ -4,8 +4,7 @@ Setup and configuration for developing and deploying serverless framework .net c
   - `brew cask install visual-studio-code`
 - Install c# extension from within vs code
 - Install dotnet core sdk
-  - ```
-  sudo mkdir -p /opt/dotnet
+  - ```  sudo mkdir -p /opt/dotnet
 # staff group is specific to macOS - Linux will be different
 sudo chown -R $(whoami):staff /opt/dotnet
 curl -o dotnet-install.sh https://dot.net/v1/dotnet-install.sh
