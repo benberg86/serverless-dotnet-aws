@@ -24,6 +24,11 @@ namespace AwsDotnetCsharp
       var dbs = new DescribeDBInstancesRequest();
       //var dbresponse = c.ListQueuesAsync(request);
       var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+      dbresponse.Result.DBInstances.ForEach(instance =>
+      {
+        //do stuff for each instance in region
+        context.Logger.LogLine(instance.DBInstanceArn);
+      });
 
       var response = new APIGatewayProxyResponse
       {
