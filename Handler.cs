@@ -4,6 +4,11 @@ using System;
 using System.Net;
 using System.Collections;
 using System.Collections.Generic;
+using Amazon.RDS;
+using Amazon.RDS.Model;
+using System.Threading.Tasks;
+
+
 
 [assembly:LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
@@ -15,11 +20,15 @@ namespace AwsDotnetCsharp
     {
       // Log entries show up in CloudWatch
       context.Logger.LogLine("Example log entry\n");
+      var c = new AmazonRDSClient();
+      var dbs = new DescribeDBInstancesRequest();
+      //var dbresponse = c.ListQueuesAsync(request);
+      var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
 
       var response = new APIGatewayProxyResponse
       {
         StatusCode = (int)HttpStatusCode.OK,
-        Body = "{ \"Message\": \"Hello World\" }",
+        Body = "{ \"Message\": " + dbresponse + " }",
         Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
       };
 
