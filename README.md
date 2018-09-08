@@ -24,3 +24,19 @@ npm install -g serverless
 ```
 sls create --template aws-csharp --name projectname
 ```
+
+#Build
+`sh build.sh`
+
+
+#Deploy Service
+`sls deploy -v`
+
+#Deploy Function
+`serverless deploy function -f hello`
+
+#Invoke Function
+`serverless invoke -f hello -l`
+
+#Cleanup
+`serverless remove`
