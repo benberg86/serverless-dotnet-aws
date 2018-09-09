@@ -45,3 +45,18 @@ sls create --template aws-csharp --name projectname
 #Cleanup
 
 `serverless remove`
+
+
+Setup and configuration for developing and deploying serverless framework .net core 2.1 c# applications on windows
+RUN AS ADMIN
+- Install vs code
+  - `choco install vscode -y`
+- Install c# extension from within vs code
+- Install dotnet core sdk
+  - `choco install dotnetcore-sdk -y`
+- Install nodejs
+  - `choco install nodejs -y`
+- Refresh
+  - `refreshenv`
+- Install Serverless Framework
+  - `npm install -g serverless`
