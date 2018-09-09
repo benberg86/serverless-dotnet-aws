@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using Amazon.RDS;
 using Amazon.RDS.Model;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+
 
 
 
@@ -22,25 +24,30 @@ namespace AwsDotnetCsharp
       context.Logger.LogLine("Example log entry\n");
       var c = new AmazonRDSClient();
       var dbs = new DescribeDBInstancesRequest();
+      var tags = new ListTagsForResourceRequest();
+      
       //var dbresponse = c.ListQueuesAsync(request);
       var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
       dbresponse.Result.DBInstances.ForEach(instance =>
       {
         //do stuff for each instance in region
         context.Logger.LogLine(instance.DBInstanceArn);
-
+        var listtagrequest = new ListTagsForResourceRequest();
+        listtagrequest.ResourceName = instance.DBInstanceArn;
+        var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+        context.Logger.LogLine(Newtonsoft.Json.JsonConvert.SerializeObject(tagresponse.Result.TagList));
       });
       var strresponse = "";
       dbresponse.Result.DBInstances.ForEach(instance =>
       {
-        strresponse += instance.DBName + System.Environment.NewLine;
+        strresponse += instance.DBInstanceIdentifier + System.Environment.NewLine;
 
       });
 
       var response = new APIGatewayProxyResponse
       {
         StatusCode = (int)HttpStatusCode.OK,
-        Body = "{ \"Message\":" + strresponse + "}",
+        Body = Newtonsoft.Json.JsonConvert.SerializeObject(dbresponse.Result),
         Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
       };
 
