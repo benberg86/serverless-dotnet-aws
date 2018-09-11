@@ -8,7 +8,7 @@ using Amazon.RDS;
 using Amazon.RDS.Model;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-
+using Logzio.DotNet.NLog;
 
 
 

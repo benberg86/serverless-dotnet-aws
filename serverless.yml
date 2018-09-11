@@ -24,6 +24,7 @@ provider:
     -  Effect: "Allow"
        Action:
          - "rds:DescribeDBInstances"
+         - "rds:ListTagsForResource"
        Resource:
          - "*"
          
