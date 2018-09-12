@@ -16,26 +16,123 @@ using Logzio.DotNet.NLog;
 
 namespace AwsDotnetCsharp
 {
+    public class RDSStatusResponse
+    {
+      public string RDSInstanceName {get;set;} = string.Empty;
+      public string Status {get;set;} = string.Empty;
+    }
     public class Handler  
     {
-    public APIGatewayProxyResponse Hello(APIGatewayProxyRequest request, ILambdaContext context)
+    public APIGatewayProxyResponse KeepOff(APIGatewayProxyRequest request, ILambdaContext context)
     {
       // Log entries show up in CloudWatch
-      context.Logger.LogLine("Example log entry\n");
+      context.Logger.LogLine("Starting KeepOff Function");
+
       var c = new AmazonRDSClient();
       var dbs = new DescribeDBInstancesRequest();
       var tags = new ListTagsForResourceRequest();
+      var RDSResponseList = new List<RDSStatusResponse>();
+
       
-      //var dbresponse = c.ListQueuesAsync(request);
       var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
       dbresponse.Result.DBInstances.ForEach(instance =>
       {
-        //do stuff for each instance in region
-        context.Logger.LogLine(instance.DBInstanceArn);
+        //log arn on instance
+        //context.Logger.LogLine(instance.DBInstanceArn);
         var listtagrequest = new ListTagsForResourceRequest();
         listtagrequest.ResourceName = instance.DBInstanceArn;
+        //query tags on instance
         var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
-        context.Logger.LogLine(Newtonsoft.Json.JsonConvert.SerializeObject(tagresponse.Result.TagList));
+        //iterate through tags
+        tagresponse.Result.TagList.ForEach(tag =>
+        {
+          //check if tag name is keep-off
+          if (tag.Key == "keep-off")
+          {
+            //context.Logger.LogLine(instance.DBInstanceArn);
+            //check if tag value is true
+            if (tag.Value == "true")
+            {
+              //check if instance is on
+              if (instance.DBInstanceStatus == "available")
+              {
+                //check if instance is on
+                var RDSstatus = new RDSStatusResponse();
+                RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                RDSstatus.Status = tag.Value;
+                RDSResponseList.Add(RDSstatus);
+                
+                var stopdb = new StopDBInstanceRequest();
+                stopdb.DBInstanceIdentifier = instance.DBInstanceIdentifier;
+
+                //var stopresponse = Task.Run(() => c.StopDBInstanceAsync(stopdb));
+                //Log that db is stopping
+                context.Logger.LogLine(instance.DBInstanceArn + " has tag keep-off");
+
+              }
+              
+              
+            }
+
+          }
+
+
+
+        });
+      });
+      
+
+      var response = new APIGatewayProxyResponse
+      {
+        StatusCode = (int)HttpStatusCode.OK,
+        Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
+        Headers = new Dictionary<string, string> { { "Content-Type", "application/json" },{ "PracticeWeek", "Rocks!" } }
+      };
+
+      return response;
+    }
+
+    public APIGatewayProxyResponse Status(APIGatewayProxyRequest request, ILambdaContext context)
+    {
+      // Log entries show up in CloudWatch
+      context.Logger.LogLine("Starting Status Function");
+
+      var c = new AmazonRDSClient();
+      var dbs = new DescribeDBInstancesRequest();
+      var tags = new ListTagsForResourceRequest();
+
+
+      var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+      dbresponse.Result.DBInstances.ForEach(instance =>
+      {
+        
+        var listtagrequest = new ListTagsForResourceRequest();
+        listtagrequest.ResourceName = instance.DBInstanceArn;
+        //query tags on instance
+        var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+        //iterate through tags
+        tagresponse.Result.TagList.ForEach(tag =>
+        {
+          //check if tag name is keep-off
+          if (tag.Key == "keep-off")
+          {
+            context.Logger.LogLine(instance.DBInstanceArn +" has tag:" + tag.Key);
+            //check if tag value is true
+            if (tag.Value == "true")
+            {
+              context.Logger.LogLine(instance.DBInstanceArn + " has tag keep-off tag value:" + tag.Value);
+              
+              
+            }
+
+          }
+
+
+
+        });
+        //create object of instance arn and tag with value 'keepoff'
+
+        //context.Logger.LogLine(Newtonsoft.Json.JsonConvert.SerializeObject(tagresponse.Result.TagList));
       });
       var strresponse = "";
       dbresponse.Result.DBInstances.ForEach(instance =>

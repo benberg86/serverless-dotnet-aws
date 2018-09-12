@@ -25,6 +25,8 @@ provider:
        Action:
          - "rds:DescribeDBInstances"
          - "rds:ListTagsForResource"
+         - "rds:startdbinstance"
+         - "rds:stopdbinstance"
        Resource:
          - "*"
          
@@ -60,16 +62,19 @@ package:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: CsharpHandlers::AwsDotnetCsharp.Handler::Hello
-
-#    The following are a few example events you can configure
-#    NOTE: Please make sure to change your handler code to work with those events
-#    Check the event documentation for details
+  keepoff:
+    handler: CsharpHandlers::AwsDotnetCsharp.Handler::KeepOff
     events:
       - http:
-          path: users/create
+          path: rds/keepoff
+          method: post
+  status:
+      handler: CsharpHandlers::AwsDotnetCsharp.Handler::Status
+      events:
+      - http:
+          path: rds/status
           method: get
+    
 
 #    Define function environment variables here
 #    environment:
