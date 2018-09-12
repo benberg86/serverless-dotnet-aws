@@ -77,8 +77,10 @@ namespace AwsDotnetCsharp
 
 
               }
+              }
+            }
 
-            });
+            );
           });
 
 
