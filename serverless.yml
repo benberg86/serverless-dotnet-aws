@@ -11,7 +11,8 @@
 #
 # Happy Coding!
 
-service: turnoffrds # NOTE: update this with your service name
+service: bberg-turnoffrds
+stage: dev # NOTE: update this with your service name
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
@@ -25,6 +26,8 @@ provider:
        Action:
          - "rds:DescribeDBInstances"
          - "rds:ListTagsForResource"
+         - "rds:startdbinstance"
+         - "rds:stopdbinstance"
        Resource:
          - "*"
          
@@ -60,16 +63,25 @@ package:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: CsharpHandlers::AwsDotnetCsharp.Handler::Hello
-
-#    The following are a few example events you can configure
-#    NOTE: Please make sure to change your handler code to work with those events
-#    Check the event documentation for details
+  keepoff:
+    handler: CsharpHandlers::AwsDotnetCsharp.Handler::KeepOff
     events:
       - http:
-          path: users/create
+          path: rds/keepoff
+          method: post
+  status:
+      handler: CsharpHandlers::AwsDotnetCsharp.Handler::Status
+      events:
+      - http:
+          path: rds/status
           method: get
+  turnon:
+      handler: CsharpHandlers::AwsDotnetCsharp.Handler::TurnOn
+      events:
+      - http:
+          path: rds/turnon
+          method: post
+    
 
 #    Define function environment variables here
 #    environment:

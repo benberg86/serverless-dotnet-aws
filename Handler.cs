@@ -16,43 +16,278 @@ using Logzio.DotNet.NLog;
 
 namespace AwsDotnetCsharp
 {
+    public class RDSStatusResponse
+    {
+      public string RDSInstanceName {get;set;} = string.Empty;
+      public string TagValue {get;set;} = string.Empty;
+
+      public string CurrentStatus {get;set;} = string.Empty;
+      public string Note {get; set;} = string.Empty;
+    }
     public class Handler  
     {
-    public APIGatewayProxyResponse Hello(APIGatewayProxyRequest request, ILambdaContext context)
+      public APIGatewayProxyResponse KeepOff(APIGatewayProxyRequest request, ILambdaContext context)
+      {
+        // Log entries show up in CloudWatch
+        context.Logger.LogLine("Starting KeepOff Function");
+
+        var c = new AmazonRDSClient();
+        var dbs = new DescribeDBInstancesRequest();
+        var tags = new ListTagsForResourceRequest();
+        var RDSResponseList = new List<RDSStatusResponse>();
+
+        try {
+
+        
+          var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+          dbresponse.Result.DBInstances.ForEach(instance =>
+          {
+            //log arn on instance
+            //context.Logger.LogLine(instance.DBInstanceArn);
+            var listtagrequest = new ListTagsForResourceRequest();
+            listtagrequest.ResourceName = instance.DBInstanceArn;
+            //query tags on instance
+            var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+            //iterate through tags
+            tagresponse.Result.TagList.ForEach(tag =>
+            {
+              //check if tag name is keep-off
+              if (tag.Key == "keep-off")
+              {
+                //context.Logger.LogLine(instance.DBInstanceArn);
+                //check if tag value is true
+                if (tag.Value == "true")
+                {
+                  //check if instance is on
+                  if (instance.DBInstanceStatus == "available")
+                  {
+                    //check if instance is on
+                    var RDSstatus = new RDSStatusResponse();
+                    RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                    RDSstatus.TagValue = tag.Value;
+                    RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                    RDSstatus.Note = "Making call to turn off";
+                    RDSResponseList.Add(RDSstatus);
+
+                    
+                    var stopdb = new StopDBInstanceRequest();
+                    stopdb.DBInstanceIdentifier = instance.DBInstanceIdentifier;
+
+                    var stopresponse = Task.Run(() => c.StopDBInstanceAsync(stopdb));
+                    //Log that db is stopping
+                    context.Logger.LogLine(instance.DBInstanceArn + " has been stopped with status");
+
+                  }
+                  else {
+                    var RDSstatus = new RDSStatusResponse();
+                    RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                    RDSstatus.TagValue = tag.Value;
+                    RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                    RDSstatus.Note = "Not in available state";
+                    RDSResponseList.Add(RDSstatus);
+
+                  }
+
+
+              }
+              else {
+                  var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Has Tag but Value is not true";
+                  RDSResponseList.Add(RDSstatus);
+              }
+              }
+            }
+
+            );
+          });
+
+
+          var response = new APIGatewayProxyResponse
+          {
+            StatusCode = (int)HttpStatusCode.OK,
+            Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
+            Headers = new Dictionary<string, string> { { "Content-Type", "application/json" },{ "PracticeWeek", "Rocks!" } }
+          };
+          return response;
+        } catch (Exception ex){
+            var response = new APIGatewayProxyResponse
+            {
+              StatusCode = 500,
+              Body = Newtonsoft.Json.JsonConvert.SerializeObject(ex),
+              Headers = new Dictionary<string, string> { { "Content-Type", "application/json" },{ "PracticeWeek", "Rocks!" } }
+            };
+          return response;
+
+
+        } 
+      }
+    public APIGatewayProxyResponse TurnOn(APIGatewayProxyRequest request, ILambdaContext context)
     {
       // Log entries show up in CloudWatch
-      context.Logger.LogLine("Example log entry\n");
+      context.Logger.LogLine("Starting TurnOn Function");
+
       var c = new AmazonRDSClient();
       var dbs = new DescribeDBInstancesRequest();
       var tags = new ListTagsForResourceRequest();
-      
-      //var dbresponse = c.ListQueuesAsync(request);
-      var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
-      dbresponse.Result.DBInstances.ForEach(instance =>
-      {
-        //do stuff for each instance in region
-        context.Logger.LogLine(instance.DBInstanceArn);
-        var listtagrequest = new ListTagsForResourceRequest();
-        listtagrequest.ResourceName = instance.DBInstanceArn;
-        var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
-        context.Logger.LogLine(Newtonsoft.Json.JsonConvert.SerializeObject(tagresponse.Result.TagList));
-      });
-      var strresponse = "";
-      dbresponse.Result.DBInstances.ForEach(instance =>
-      {
-        strresponse += instance.DBInstanceIdentifier + System.Environment.NewLine;
+      var RDSResponseList = new List<RDSStatusResponse>();
 
-      });
-
-      var response = new APIGatewayProxyResponse
+      try
       {
-        StatusCode = (int)HttpStatusCode.OK,
-        Body = Newtonsoft.Json.JsonConvert.SerializeObject(dbresponse.Result),
-        Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
-      };
 
-      return response;
+
+        var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+        dbresponse.Result.DBInstances.ForEach(instance =>
+        {
+            //log arn on instance
+            //context.Logger.LogLine(instance.DBInstanceArn);
+            var listtagrequest = new ListTagsForResourceRequest();
+          listtagrequest.ResourceName = instance.DBInstanceArn;
+            //query tags on instance
+            var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+            //iterate through tags
+            tagresponse.Result.TagList.ForEach(tag =>
+          {
+              //check if tag name is keep-off
+              if (tag.Key == "keep-off")
+            {
+                //context.Logger.LogLine(instance.DBInstanceArn);
+                //check if tag value is true
+                if (tag.Value == "true")
+              {
+                  //check if instance is on
+                  if (instance.DBInstanceStatus == "stopped")
+                {
+                    //check if instance is off
+                    var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Making call to turn on";
+                  RDSResponseList.Add(RDSstatus);
+
+
+                  var startdb = new StartDBInstanceRequest();
+                  startdb.DBInstanceIdentifier = instance.DBInstanceIdentifier;
+
+                  var startresponse = Task.Run(() => c.StartDBInstanceAsync(startdb));
+                    //Log that db is starting
+                    context.Logger.LogLine(instance.DBInstanceArn + " has been started");
+
+                }
+                else
+                {
+                  var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Not in stopped state";
+                  RDSResponseList.Add(RDSstatus);
+
+                }
+
+
+              }
+              else
+              {
+                var RDSstatus = new RDSStatusResponse();
+                RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                RDSstatus.TagValue = tag.Value;
+                RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                RDSstatus.Note = "Has Tag but Value is not true";
+                RDSResponseList.Add(RDSstatus);
+              }
+            }
+          }
+
+          );
+        });
+
+
+        var response = new APIGatewayProxyResponse
+        {
+          StatusCode = (int)HttpStatusCode.OK,
+          Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
+          Headers = new Dictionary<string, string> { { "Content-Type", "application/json" }, { "PracticeWeek", "Rocks!" } }
+        };
+        return response;
+      }
+      catch (Exception ex)
+      {
+        var response = new APIGatewayProxyResponse
+        {
+          StatusCode = 500,
+          Body = Newtonsoft.Json.JsonConvert.SerializeObject(ex),
+          Headers = new Dictionary<string, string> { { "Content-Type", "application/json" }, { "PracticeWeek", "Rocks!" } }
+        };
+        return response;
+
+
+      }
     }
+
+      public APIGatewayProxyResponse Status(APIGatewayProxyRequest request, ILambdaContext context)
+      {
+        // Log entries show up in CloudWatch
+        context.Logger.LogLine("Starting Status Function");
+
+        var c = new AmazonRDSClient();
+        var dbs = new DescribeDBInstancesRequest();
+        var tags = new ListTagsForResourceRequest();
+        var RDSResponseList = new List<RDSStatusResponse>();
+        try
+        {
+
+
+          var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+          dbresponse.Result.DBInstances.ForEach(instance =>
+          {
+            
+            var listtagrequest = new ListTagsForResourceRequest();
+            listtagrequest.ResourceName = instance.DBInstanceArn;
+            //query tags on instance
+            var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+            //iterate through tags
+            tagresponse.Result.TagList.ForEach(tag =>
+            {
+              //check if tag name is keep-off
+              if (tag.Key == "keep-off")
+              {
+                //set status object for response
+                var RDSstatus = new RDSStatusResponse();
+                RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                RDSstatus.TagValue = tag.Value;
+                RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                RDSResponseList.Add(RDSstatus);
+              }
+            });
+            
+          });
+          
+
+          var response = new APIGatewayProxyResponse
+          {
+            StatusCode = (int)HttpStatusCode.OK,
+            Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
+            Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+          };
+
+          return response;
+        }catch(Exception ex)
+        {
+            var response = new APIGatewayProxyResponse
+            {
+              StatusCode = 500,
+              Body = Newtonsoft.Json.JsonConvert.SerializeObject(ex),
+              Headers = new Dictionary<string, string> { { "Content-Type", "application/json" },{ "PracticeWeek", "Rocks!" } }
+            };
+          return response;
+            
+        }
+
+      }
     }
 
     public class Response
@@ -79,3 +314,4 @@ namespace AwsDotnetCsharp
       }
     }
 }
+
