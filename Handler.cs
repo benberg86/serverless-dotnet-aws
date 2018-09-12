@@ -22,6 +22,7 @@ namespace AwsDotnetCsharp
       public string TagValue {get;set;} = string.Empty;
 
       public string CurrentStatus {get;set;} = string.Empty;
+      public string Note {get; set;} = string.Empty;
     }
     public class Handler  
     {
@@ -64,7 +65,10 @@ namespace AwsDotnetCsharp
                     var RDSstatus = new RDSStatusResponse();
                     RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
                     RDSstatus.TagValue = tag.Value;
+                    RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                    RDSstatus.Note = "Making call to turn off";
                     RDSResponseList.Add(RDSstatus);
+
                     
                     var stopdb = new StopDBInstanceRequest();
                     stopdb.DBInstanceIdentifier = instance.DBInstanceIdentifier;
@@ -74,8 +78,25 @@ namespace AwsDotnetCsharp
                     context.Logger.LogLine(instance.DBInstanceArn + " has been stopped with status");
 
                   }
+                  else {
+                    var RDSstatus = new RDSStatusResponse();
+                    RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                    RDSstatus.TagValue = tag.Value;
+                    RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                    RDSstatus.Note = "Not in available state";
+                    RDSResponseList.Add(RDSstatus);
+
+                  }
 
 
+              }
+              else {
+                  var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Has Tag but Value is not true";
+                  RDSResponseList.Add(RDSstatus);
               }
               }
             }
