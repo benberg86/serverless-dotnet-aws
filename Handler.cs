@@ -19,7 +19,9 @@ namespace AwsDotnetCsharp
     public class RDSStatusResponse
     {
       public string RDSInstanceName {get;set;} = string.Empty;
-      public string Status {get;set;} = string.Empty;
+      public string TagValue {get;set;} = string.Empty;
+
+      public string CurrentStatus {get;set;} = string.Empty;
     }
     public class Handler  
     {
@@ -61,7 +63,7 @@ namespace AwsDotnetCsharp
                     //check if instance is on
                     var RDSstatus = new RDSStatusResponse();
                     RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
-                    RDSstatus.Status = tag.Value;
+                    RDSstatus.TagValue = tag.Value;
                     RDSResponseList.Add(RDSstatus);
                     
                     var stopdb = new StopDBInstanceRequest();
@@ -72,13 +74,9 @@ namespace AwsDotnetCsharp
                     context.Logger.LogLine(instance.DBInstanceArn + " has been stopped with status");
 
                   }
-                  
-                  
-                }
+
 
               }
-
-
 
             });
           });
@@ -101,10 +99,7 @@ namespace AwsDotnetCsharp
           return response;
 
 
-        }
-        
-
-        
+        } 
       }
 
       public APIGatewayProxyResponse Status(APIGatewayProxyRequest request, ILambdaContext context)
@@ -134,21 +129,22 @@ namespace AwsDotnetCsharp
               //check if tag name is keep-off
               if (tag.Key == "keep-off")
               {
-                context.Logger.LogLine(instance.DBInstanceArn +" has tag:" + tag.Key);
-                //check if tag value is true
-
+                //set status object for response
+                var RDSstatus = new RDSStatusResponse();
+                RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                RDSstatus.TagValue = tag.Value;
+                RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                RDSResponseList.Add(RDSstatus);
               }
             });
-            //create object of instance arn and tag with value 'keepoff'
-
-            //context.Logger.LogLine(Newtonsoft.Json.JsonConvert.SerializeObject(tagresponse.Result.TagList));
+            
           });
           
 
           var response = new APIGatewayProxyResponse
           {
             StatusCode = (int)HttpStatusCode.OK,
-            Body = Newtonsoft.Json.JsonConvert.SerializeObject(dbresponse.Result),
+            Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
             Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
           };
 
