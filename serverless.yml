@@ -75,6 +75,12 @@ functions:
       - http:
           path: rds/status
           method: get
+  turnon:
+      handler: CsharpHandlers::AwsDotnetCsharp.Handler::TurnOn
+      events:
+      - http:
+          path: rds/turnon
+          method: post
     
 
 #    Define function environment variables here

@@ -124,6 +124,109 @@ namespace AwsDotnetCsharp
 
         } 
       }
+    public APIGatewayProxyResponse TurnOn(APIGatewayProxyRequest request, ILambdaContext context)
+    {
+      // Log entries show up in CloudWatch
+      context.Logger.LogLine("Starting TurnOn Function");
+
+      var c = new AmazonRDSClient();
+      var dbs = new DescribeDBInstancesRequest();
+      var tags = new ListTagsForResourceRequest();
+      var RDSResponseList = new List<RDSStatusResponse>();
+
+      try
+      {
+
+
+        var dbresponse = Task.Run(() => c.DescribeDBInstancesAsync(dbs).Result);
+        dbresponse.Result.DBInstances.ForEach(instance =>
+        {
+            //log arn on instance
+            //context.Logger.LogLine(instance.DBInstanceArn);
+            var listtagrequest = new ListTagsForResourceRequest();
+          listtagrequest.ResourceName = instance.DBInstanceArn;
+            //query tags on instance
+            var tagresponse = Task.Run(() => c.ListTagsForResourceAsync(listtagrequest).Result);
+            //iterate through tags
+            tagresponse.Result.TagList.ForEach(tag =>
+          {
+              //check if tag name is keep-off
+              if (tag.Key == "keep-off")
+            {
+                //context.Logger.LogLine(instance.DBInstanceArn);
+                //check if tag value is true
+                if (tag.Value == "true")
+              {
+                  //check if instance is on
+                  if (instance.DBInstanceStatus == "stopped")
+                {
+                    //check if instance is off
+                    var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Making call to turn on";
+                  RDSResponseList.Add(RDSstatus);
+
+
+                  var startdb = new StartDBInstanceRequest();
+                  startdb.DBInstanceIdentifier = instance.DBInstanceIdentifier;
+
+                  var startresponse = Task.Run(() => c.StartDBInstanceAsync(startdb));
+                    //Log that db is starting
+                    context.Logger.LogLine(instance.DBInstanceArn + " has been started");
+
+                }
+                else
+                {
+                  var RDSstatus = new RDSStatusResponse();
+                  RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                  RDSstatus.TagValue = tag.Value;
+                  RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                  RDSstatus.Note = "Not in stopped state";
+                  RDSResponseList.Add(RDSstatus);
+
+                }
+
+
+              }
+              else
+              {
+                var RDSstatus = new RDSStatusResponse();
+                RDSstatus.RDSInstanceName = instance.DBInstanceIdentifier;
+                RDSstatus.TagValue = tag.Value;
+                RDSstatus.CurrentStatus = instance.DBInstanceStatus;
+                RDSstatus.Note = "Has Tag but Value is not true";
+                RDSResponseList.Add(RDSstatus);
+              }
+            }
+          }
+
+          );
+        });
+
+
+        var response = new APIGatewayProxyResponse
+        {
+          StatusCode = (int)HttpStatusCode.OK,
+          Body = Newtonsoft.Json.JsonConvert.SerializeObject(RDSResponseList),
+          Headers = new Dictionary<string, string> { { "Content-Type", "application/json" }, { "PracticeWeek", "Rocks!" } }
+        };
+        return response;
+      }
+      catch (Exception ex)
+      {
+        var response = new APIGatewayProxyResponse
+        {
+          StatusCode = 500,
+          Body = Newtonsoft.Json.JsonConvert.SerializeObject(ex),
+          Headers = new Dictionary<string, string> { { "Content-Type", "application/json" }, { "PracticeWeek", "Rocks!" } }
+        };
+        return response;
+
+
+      }
+    }
 
       public APIGatewayProxyResponse Status(APIGatewayProxyRequest request, ILambdaContext context)
       {
